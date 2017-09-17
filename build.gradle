@@ -1,0 +1,36 @@
+
+buildscript {
+    ext {
+        springBootVersion = '1.5.7.RELEASE'
+    }
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+    }
+}
+
+apply plugin: 'groovy'
+apply plugin: 'org.springframework.boot'
+
+group = 'com.friggsoft'
+version = '0.0.2-SNAPSHOT'
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile('org.springframework.boot:spring-boot-starter-websocket')
+    compile('com.fasterxml.jackson.core:jackson-databind')
+    compile('org.codehaus.groovy:groovy')
+
+    runtime('org.springframework.boot:spring-boot-devtools')
+}
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '4.1'
+}
