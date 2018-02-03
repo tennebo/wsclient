@@ -19,19 +19,16 @@ import groovy.util.logging.Slf4j
 final class WsClientApp {
 
     /** Websocket server URL. */
-    static final String WS_URL = "ws://localhost:8080/ws"
+    static String webSocketUrl = "ws://localhost:8080/ws"
 
     /** Websocket app destination. */
-    static final String APP_DST = "/app"
+    static String appDest = "/app"
 
     /** Websocket topic destination. */
-    static final String TOPIC_DST = "/topic/pulse"
+    static String topic = "/topic/pulse"
 
-    static void main(String[] args) {
-        boolean useSockJs = args.length > 0
-
-        log.info("Here we go! {}using SockJS.", (useSockJs? "" : "Not "))
-
+    /** Create a new WebSocket client, with or w/o SockJS. */
+    static WebSocketStompClient createStompClient(boolean useSockJs) {
         WebSocketClient webSocketClient = new StandardWebSocketClient()
         WebSocketStompClient stompClient
         if (useSockJs) {
@@ -43,12 +40,51 @@ final class WsClientApp {
         } else {
             stompClient = new WebSocketStompClient(webSocketClient)
         }
+        return stompClient
+    }
 
-        // Avoid StringMessageConverter; it only works with "text/plain" messages
+    /**
+     * Avoid StringMessageConverter; it only works with "text/plain" messages.
+     */
+    static void setupMessageConverter(WebSocketStompClient stompClient) {
         def messageConverter = new MappingJackson2MessageConverter()
         messageConverter.prettyPrint = true
         messageConverter.strictContentTypeMatch = false
         stompClient.setMessageConverter(messageConverter)
+    }
+
+    static void main(String[] args) {
+        // Parse the commandline
+        def cli = new CliBuilder(usage: 'WsClient -[hutas]', stopAtNonOption: false)
+        cli.with {
+            h longOpt: 'help', 'Show help'
+            u longOpt: 'url', args: 1, argName: 'url', 'WebSocket URL to connect to'
+            t longOpt: 'topic', args:1, argName: 'topic', 'WebSocket topic to listen to'
+            a longOpt: 'app', args:1, argName: 'app', 'App destination'
+            s longOpt: 'sockjs', 'Use SockJS'
+        }
+
+        def options = cli.parse(args)
+        if (!options || options.h) {
+            // Usage info has already been printed if options is null
+            options && cli.usage()
+            return
+        }
+
+        if (options.u) {
+            webSocketUrl = options.url
+        }
+        if (options.a) {
+            appDest = options.app
+        }
+        if (options.t) {
+            topic = options.topic
+        }
+        boolean useSockJs = options.s
+
+        log.info("Here we go! {}using SockJS.", (useSockJs? "" : "Not "))
+        WebSocketStompClient stompClient = createStompClient(useSockJs)
+        setupMessageConverter(stompClient)
 
         // For heartbeats and receipt tracking
         ThreadPoolTaskScheduler taskScheduler = new ThreadPoolTaskScheduler()
@@ -56,15 +92,14 @@ final class WsClientApp {
         stompClient.setTaskScheduler(taskScheduler)
         stompClient.setReceiptTimeLimit(5000)
 
-        def sessionHandler = new WsStompSessionHandler(TOPIC_DST)
-        def futureSession = stompClient.connect(WS_URL, sessionHandler)
+        def sessionHandler = new WsStompSessionHandler(topic)
+        def futureSession = stompClient.connect(webSocketUrl, sessionHandler)
         StompSession session
-
         try {
             session = futureSession.get()
             log.info("Session {} connected: {}", session.sessionId, session.connected)
         } catch (ExecutionException ex) {
-            log.error("Cannot connect to {}: {}", WS_URL, ex.cause.message)
+            log.error("Cannot connect to {}: {}", webSocketUrl, ex.cause.message)
             System.exit(1)
             return // To keep the compiler happy
         }
@@ -87,8 +122,8 @@ final class WsClientApp {
                 break
             }
             if (!line.empty) {
-                log.info("Sending {} to destination {}", line, APP_DST)
-                session.send(APP_DST, line)
+                log.info("Sending {} to destination {}", line, appDest)
+                session.send(appDest, line)
             }
         }
         System.exit(0)
