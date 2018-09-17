@@ -61,7 +61,7 @@ final class WsClientApp {
     /**
      * Construct a JWT bearer token.
      */
-    static String jwtToken(String token) {
+    static String buildJwtBearerToken(String token) {
         return "Bearer " + token
     }
 
@@ -109,7 +109,7 @@ final class WsClientApp {
         stompClient.setReceiptTimeLimit(5000)
 
         def connectHeaders = new StompHeaders()
-        connectHeaders.add(HttpHeaders.AUTHORIZATION, jwtToken(null))
+        connectHeaders.add(HttpHeaders.AUTHORIZATION, buildJwtBearerToken(jwtToken))
         def handshakeHeaders = new WebSocketHttpHeaders()
         def sessionHandler = new WsStompSessionHandler(topic)
         def futureSession = stompClient.connect(webSocketUrl, handshakeHeaders, connectHeaders, sessionHandler)
