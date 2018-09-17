@@ -51,27 +51,22 @@ final class WsStompSessionHandler implements StompSessionHandler {
         return String.class
     }
 
-    /** When is this called!!? */
     @Override
     void handleFrame(StompHeaders headers, Object payload) {
-        log.info("Received payload: {}", payload.toString())
         logHeaders(headers)
+        log.info("Received payload: {}", payload == null? "<null>" : payload.toString())
     }
 
     @Override
     void handleException(
             StompSession session, StompCommand command, StompHeaders headers,
             byte[] payload, Throwable ex) {
-        log.error(
-                "Command {} failed on session {}: {}",
-                command, session.sessionId, ex.message)
+        log.error("Command {} failed on session {}: {}", command, session.sessionId, ex.message)
         logHeaders(headers)
     }
 
     @Override
     void handleTransportError(StompSession session, Throwable ex) {
-        log.error(
-                "Transport error on session {}: {}",
-                session.sessionId, ex.message)
+        log.error("Transport error on session {}: {}", session.sessionId, ex.message)
     }
 }
