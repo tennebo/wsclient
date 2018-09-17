@@ -1,10 +1,15 @@
 package com.friggsoft.wsclient
 
+import groovy.util.logging.Slf4j
+
 import java.util.concurrent.ExecutionException
 
+import org.springframework.http.HttpHeaders
 import org.springframework.messaging.converter.MappingJackson2MessageConverter
+import org.springframework.messaging.simp.stomp.StompHeaders
 import org.springframework.messaging.simp.stomp.StompSession
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler
+import org.springframework.web.socket.WebSocketHttpHeaders
 import org.springframework.web.socket.client.WebSocketClient
 import org.springframework.web.socket.client.standard.StandardWebSocketClient
 import org.springframework.web.socket.messaging.WebSocketStompClient
@@ -13,13 +18,13 @@ import org.springframework.web.socket.sockjs.client.SockJsClient
 import org.springframework.web.socket.sockjs.client.Transport
 import org.springframework.web.socket.sockjs.client.WebSocketTransport
 
-import groovy.util.logging.Slf4j
-
 @Slf4j
 final class WsClientApp {
 
     /** Websocket server URL. */
     static String webSocketUrl = "ws://localhost:8080/ws"
+
+    static String jwtToken
 
     /** Websocket app destination. */
     static String appDest = "/app"
@@ -53,12 +58,20 @@ final class WsClientApp {
         stompClient.setMessageConverter(messageConverter)
     }
 
+    /**
+     * Construct a JWT bearer token.
+     */
+    static String jwtToken(String token) {
+        return "Bearer " + token
+    }
+
     static void main(String[] args) {
         // Parse the commandline
         def cli = new CliBuilder(usage: 'WsClient -[hutas]', stopAtNonOption: false)
         cli.with {
             h longOpt: 'help', 'Show help'
             u longOpt: 'url', args: 1, argName: 'url', 'WebSocket URL to connect to'
+            j longOpt: 'token', args:1, argName: 'token', 'JWT bearer token for authentication'
             t longOpt: 'topic', args:1, argName: 'topic', 'WebSocket topic to listen to'
             a longOpt: 'app', args:1, argName: 'app', 'App destination'
             s longOpt: 'sockjs', 'Use SockJS'
@@ -73,6 +86,9 @@ final class WsClientApp {
 
         if (options.u) {
             webSocketUrl = options.url
+        }
+        if (options.j) {
+            jwtToken = options.token
         }
         if (options.a) {
             appDest = options.app
@@ -92,8 +108,11 @@ final class WsClientApp {
         stompClient.setTaskScheduler(taskScheduler)
         stompClient.setReceiptTimeLimit(5000)
 
+        def connectHeaders = new StompHeaders()
+        connectHeaders.add(HttpHeaders.AUTHORIZATION, jwtToken(null))
+        def handshakeHeaders = new WebSocketHttpHeaders()
         def sessionHandler = new WsStompSessionHandler(topic)
-        def futureSession = stompClient.connect(webSocketUrl, sessionHandler)
+        def futureSession = stompClient.connect(webSocketUrl, handshakeHeaders, connectHeaders, sessionHandler)
         StompSession session
         try {
             session = futureSession.get()
