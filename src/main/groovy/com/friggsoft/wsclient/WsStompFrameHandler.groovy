@@ -1,17 +1,17 @@
 package com.friggsoft.wsclient
 
+import groovy.util.logging.Slf4j
+
 import java.lang.reflect.Type
 
 import org.springframework.messaging.simp.stomp.StompFrameHandler
 import org.springframework.messaging.simp.stomp.StompHeaders
 
-import groovy.util.logging.Slf4j
-
 @Slf4j
 final class WsStompFrameHandler implements StompFrameHandler {
 
     /**
-     * The type we want the message serialized into.
+     * The type we want the message deserialized into.
      *
      * The payload comes as "application/json"; convert it to a map. This needs
      * {@link org.springframework.messaging.converter.MappingJackson2MessageConverter}
